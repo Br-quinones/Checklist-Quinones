@@ -1,0 +1,693 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Checklist — bonito y con modo oscuro</title>
+  <link rel="icon" href="logo.ico" type="image/x-icon">
+  <style>
+    /* Variables base (se usan para modo claro y oscuro) */
+    :root{
+      --bg: #f3f7fb;
+      --card-bg: #ffffff;
+      --text: #0f1724;
+      --muted: #556072;
+      --accent-1: #7c3aed;
+      --accent-2: #06b6d4;
+      --glass: rgba(15,23,42,0.03);
+      --border: rgba(15,23,42,0.06);
+      --success: #10b981;
+      --danger: #ef4444;
+      --shadow: 0 10px 30px rgba(12,15,25,0.06);
+      --soft: 14px;
+    }
+
+    /* Dark theme */
+    body[data-theme="dark"]{
+      --bg: linear-gradient(180deg,#071129 0%, #071a24 100%);
+      --card-bg: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); /* Más visible */
+      --text: #e6eef6; /* Texto claro */
+      --muted: #9fb0c6; /* Gris más claro para texto secundario */
+      --border: rgba(255,255,255,0.1); /* Borde más visible */
+      --shadow: 0 10px 30px rgba(2,6,23,0.7);
+    }
+
+    /* Basic reset */
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; color:var(--text); background:var(--bg); -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale}
+    .container{max-width:980px;margin:28px auto;padding:18px;}
+
+    /* Header / topbar */
+    .top {
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:18px;
+    }
+    .brand {
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+    .logo {
+      width:56px;height:56px;border-radius:12px;
+      background:linear-gradient(135deg,var(--accent-1),var(--accent-2));
+      display:grid;place-items:center;color:white;font-weight:800;
+      box-shadow: 0 8px 30px rgba(124,58,237,0.12);
+    }
+    h1{font-size:20px;margin:0}
+    .controls {display:flex;gap:10px;align-items:center}
+
+    .btn {
+      border:0;padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--text);
+      transition:transform .15s ease, box-shadow .15s ease, opacity .12s;
+      box-shadow:none;border:1px solid transparent;
+    }
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{
+      color:white;background:linear-gradient(90deg,var(--accent-1),var(--accent-2));box-shadow:0 12px 30px rgba(124,58,237,0.12);
+    }
+    .theme-toggle {
+      display:inline-grid;place-items:center;width:44px;height:44px;border-radius:10px;border:1px solid var(--border);
+      background:transparent;
+    }
+
+    /* Card */
+    .card {
+      background:var(--card-bg);
+      border-radius:14px;padding:18px;
+      box-shadow:var(--shadow);
+      border:1px solid var(--border);
+      transition:transform .18s ease, box-shadow .18s ease;
+      overflow:hidden;
+    }
+
+    /* Topbar inside card */
+    .card-top {
+      display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;
+    }
+    .stats {display:flex;gap:12px;align-items:center}
+    .stat {padding:6px 10px;border-radius:10px;background:transparent}
+    .stat .muted{display:block;font-size:12px;color:var(--muted)}
+    .stat b{font-size:16px;display:block}
+
+    /* Progress */
+    .progress{height:10px;background:rgba(0,0,0,0.04);border-radius:999px;overflow:hidden}
+    body[data-theme="dark"] .progress { background: rgba(255,255,255,0.1); } /* Fondo de progreso en oscuro */
+    .progress > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent-1),var(--accent-2));transition:width .5s cubic-bezier(.2,.9,.2,1)}
+
+    /* Task list */
+    .task-list{margin-top:16px;display:grid;gap:10px}
+    .task {
+      display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;
+      border: 2px solid transparent; 
+      background:linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.4));
+      transition:transform .22s ease, box-shadow .22s ease, border-color .22s ease, background .22s ease;
+      position:relative;
+      overflow:visible;
+      cursor: grab;
+    }
+    .task:active { cursor: grabbing; }
+
+    /* Estilo para tarea completada */
+    .task.completed {
+      border-image: linear-gradient(90deg, var(--accent-1), var(--accent-2)) 1;
+    }
+
+    body[data-theme="dark"] .task { 
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); /* Fondo de tarea en oscuro */
+    }
+
+    .task:hover { transform: translateY(-6px); box-shadow:0 18px 40px rgba(0,0,0,0.12); }
+    .task.completed:hover { transform: translateY(0); }
+
+    /* Estilo para tarea siendo arrastrada */
+    .task.dragging {
+      opacity: 0.4;
+    }
+
+    /* Checkbox */
+    .chk {
+      width:44px;height:44px;border-radius:12px;border:2px solid rgba(15,23,42,0.06);display:grid;place-items:center;flex-shrink:0;
+      background:linear-gradient(180deg, white, rgba(0,0,0,0.02));cursor:pointer;transition:all .18s ease;
+    }
+    body[data-theme="dark"] .chk { 
+      background: rgba(255,255,255,0.05); /* Fondo de checkbox en oscuro */
+      border:2px solid rgba(255,255,255,0.1); /* Borde de checkbox en oscuro */
+    }
+
+    .chk svg {opacity:0;transform:scale(.8);transition:all .18s ease}
+    .chk.checked { background:linear-gradient(90deg,var(--accent-1),var(--accent-2));border: none; box-shadow: 0 6px 20px rgba(124,58,237,0.16); }
+    .chk.checked svg {opacity:1; transform:scale(1); stroke:white}
+
+    /* Content area */
+    .task-body {flex:1;display:flex;flex-direction:column;gap:6px}
+    .task-title {font-size:20px;font-weight:800;line-height:1.05}
+    .task-sub {font-size:13px;color:var(--muted)}
+
+    /* Meta box (duración + icons + horas) */
+    .meta {
+      width:160px;min-width:160px;display:flex;flex-direction:column;align-items:center;gap:6px;
+    }
+    .meta-top {display:flex;align-items:center;justify-content:space-between;width:100%;}
+    
+    .duration {
+      font-size: 18px;
+      font-weight: 900;
+      line-height: 1;
+      text-align: center;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(124,58,237,0.06), rgba(6,182,212,0.03));
+      border: 1px solid rgba(124,58,237,0.08);
+      min-width: 82px;
+      flex-shrink: 0;
+    }
+    body[data-theme="dark"] .duration {
+      background: linear-gradient(180deg, rgba(124,58,237,0.2), rgba(6,182,212,0.1));
+      border: 1px solid rgba(124,58,237,0.25);
+    }
+
+    .meta-icons {display:flex;gap:6px;align-items:center;justify-content:center}
+    .meta-icons button {
+      width:38px;height:38px;border-radius:8px;border:1px solid var(--border);background:transparent;display:grid;place-items:center;
+      cursor:pointer;transition:transform .12s ease, background .12s;
+    }
+    body[data-theme="dark"] .meta-icons button { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); }
+    .meta-icons button:hover { transform:translateY(-3px); background: rgba(124,58,237,0.03); }
+    body[data-theme="dark"] .meta-icons button:hover { background: rgba(124,58,237,0.1); }
+
+    /* times below */
+    .time-range {font-size:13px;font-weight:700;color:var(--muted);opacity:0.95;text-align:center}
+
+    /* task action small buttons on the right (if needed) */
+    .task-actions {display:flex;gap:8px;align-items:center}
+
+    /* Modal styles */
+    .modal-overlay{position:fixed;inset:0;background:rgba(2,6,23,0.45);display:none;align-items:center;justify-content:center;z-index:1200;backdrop-filter:blur(6px)}
+    .modal-overlay.active{display:flex}
+    .modal {background:var(--card-bg);border-radius:14px;padding:20px;max-width:520px;width:94%;box-shadow:0 18px 60px rgba(2,6,23,0.35);border:1px solid var(--border)}
+    body[data-theme="dark"] .modal { box-shadow:0 18px 60px rgba(0,0,0,0.7); } /* Sombra más oscura para el modal en modo oscuro */
+    .modal h2 {margin:0 0 10px 0}
+    .modal .row {display:flex;gap:8px;align-items:center}
+    .modal input[type="text"]{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text);font-weight:700}
+    body[data-theme="dark"] .modal input[type="text"] { background: rgba(255,255,255,0.05); }
+
+    .modal .hint{font-size:13px;color:var(--muted);margin-top:8px}
+
+    /* small UI niceties */
+    .muted {color:var(--muted);font-size:13px}
+
+    /* Responsive */
+    @media (max-width:780px){
+      .meta {width:140px;min-width:130px}
+      .container{padding:12px}
+    }
+
+    /* smooth transitions for theme */
+    html,body,.card,.task,.modal,input,button {transition:all .18s ease}
+
+    /* CAMBIO: Tamaños fijos para botones de control */
+    .controls #liveClock {
+      min-width: 100px; /* Ajusta el tamaño mínimo según el formato de hora */
+      text-align: center;
+    }
+    .controls #btnAddTask {
+      min-width: 120px; /* Un tamaño base para "Agregar tarea" */
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top">
+      <div class="brand">
+        <div class="logo">TD</div>
+        <div>
+          <h1>Checklist - Quiñones</h1>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="stat" style="display: flex; flex-direction: column; align-items: center; gap: 4px; margin-right: 8px;">
+           <div class="muted"><b>Hora de inicio</b></div>
+          <input id="startTimeInput" readonly style="cursor:pointer;font-weight:800;border-radius:10px;padding:8px 12px;border:1px solid var(--border);background:transparent; text-align: center;"/>
+        </div>
+
+        <div id="liveClock" style="font-weight:800;padding:8px 12px;border-radius:10px;background:linear-gradient(90deg,var(--accent-1),var(--accent-2));color:white;box-shadow:0 8px 30px rgba(124,58,237,0.12)"></div>
+
+        <button id="btnAddTask" class="btn primary">Agregar tarea</button>
+
+        <button id="themeToggle" class="theme-toggle" title="Cambiar tema (claro/oscuro)" aria-pressed="false">
+          <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="card" id="mainCard">
+      <div class="card-top" style="align-items:stretch">
+        <div style="flex:1">
+          <div style="display:flex;gap:12px;align-items:center">
+            <div>
+              <div class="muted">Total</div>
+              <b id="totalTime">0h 0m</b>
+            </div>
+            <div>
+              <div class="muted">Progreso</div>
+              <b id="progressText">0%</b>
+            </div>
+          </div>
+        </div>
+        <div style="width:48%">
+          <div class="progress"><i id="progressBar"></i></div>
+        </div>
+      </div>
+
+      <div class="task-list" id="taskList">
+        </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px">
+        <div class="muted">Fin estimado: <b id="endTime">—</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h2 id="modalTitle">Agregar nueva tarea</h2>
+      <div style="height:8px"></div>
+      <input id="taskNameInput" type="text" placeholder="" autocomplete="off"/>
+      <div style="height:12px"></div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button id="btnDecreaseTime" class="btn" title="Reducir 15 min">−</button>
+        <div id="timeDisplay" style="flex:1;text-align:center;font-weight:800;font-size:16px;padding:10px 12px;border-radius:10px;border:1px solid var(--border)"></div>
+        <button id="btnIncreaseTime" class="btn" title="Aumentar 15 min">+</button>
+      </div>
+      <div style="height:12px"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button id="btnCancel" class="btn">Cancelar</button>
+        <button id="btnAccept" class="btn primary">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="deleteModalOverlay">
+    <div class="modal">
+      <h2>Eliminar tarea</h2>
+      <p class="muted">¿Eliminar la tarea "<b id="deleteTaskName"></b>"?</p>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+        <button id="btnCancelDelete" class="btn">Cancelar</button>
+        <button id="btnConfirmDelete" class="btn" style="background:var(--danger);color:white;border-radius:10px">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="startTimeModal">
+    <div class="modal">
+      <h2>Editar Hora de Inicio</h2>
+      <div style="height:8px"></div>
+      <div class="row">
+        <input id="startTimeText" type="text" placeholder="hh:mm" style="flex:1; text-align:center;"/>
+        <button id="startAmpm" class="btn" style="width:72px; border: 1px solid var(--border);">AM</button>
+      </div>
+      <div style="height:12px"></div>
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button id="btnCancelStart" class="btn">Cancelar</button>
+        <button id="btnSaveStart" class="btn primary">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* Estado */
+    let tasks = [];
+    let nextId = 1;
+    let selectedMinutes = 30;
+    let startTime = new Date();
+    let timePinned = false;
+    let editingTaskId = null;
+    let deletingTaskId = null;
+
+    /* helpers DOM */
+    const $ = s => document.querySelector(s);
+    const $all = s => document.querySelectorAll(s);
+    const $taskList = $('#taskList');
+    const $progressBar = $('#progressBar');
+    const $progressText = $('#progressText');
+    const $totalTime = $('#totalTime');
+    const $endTime = $('#endTime');
+    const $startTimeInput = $('#startTimeInput');
+    const $liveClock = $('#liveClock');
+    const $modalOverlay = $('#modalOverlay');
+    const $modalTitle = $('#modalTitle');
+    const $taskNameInput = $('#taskNameInput');
+    const $timeDisplay = $('#timeDisplay');
+    const $btnAddTask = $('#btnAddTask');
+    const $btnCancel = $('#btnCancel');
+    const $btnAccept = $('#btnAccept');
+    const $btnDecreaseTime = $('#btnDecreaseTime');
+    const $btnIncreaseTime = $('#btnIncreaseTime');
+
+    const $deleteModalOverlay = $('#deleteModalOverlay');
+    const $deleteTaskName = $('#deleteTaskName');
+    const $btnCancelDelete = $('#btnCancelDelete');
+    const $btnConfirmDelete = $('#btnConfirmDelete');
+
+    const $startTimeModal = $('#startTimeModal');
+    const $startTimeText = $('#startTimeText');
+    const $startAmpm = $('#startAmpm');
+    const $btnCancelStart = $('#btnCancelStart');
+    const $btnSaveStart = $('#btnSaveStart');
+
+    const $themeToggle = $('#themeToggle');
+    const $themeIcon = $('#themeIcon');
+
+    /* format helpers */
+    function pad(n){return String(n).padStart(2,'0')}
+    function formatTime(d){
+      let hh = d.getHours();
+      const mm = pad(d.getMinutes());
+      const ampm = hh >= 12 ? 'PM' : 'AM';
+      hh = hh % 12 || 12;
+      return `${hh}:${mm} ${ampm}`;
+    }
+    function formatRange(fromDate, mins){
+      const to = new Date(fromDate.getTime());
+      to.setMinutes(to.getMinutes() + mins);
+      return `${formatTime(fromDate)} — ${formatTime(to)}`;
+    }
+    function minutesToReadable(mins){
+      if (mins===0) return '0 min';
+      const h = Math.floor(mins/60); const m = mins%60;
+      return h ? `${h}h ${m?m+'m':''}` : `${m} min`;
+    }
+
+    /* theme handling */
+    function applyTheme(t){
+      document.body.setAttribute('data-theme', t);
+      $themeToggle.setAttribute('aria-pressed', t === 'dark' ? 'true' : 'false');
+      // icon swap (sun vs moon)
+      if(t === 'dark'){
+        $themeIcon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+      } else {
+        $themeIcon.innerHTML = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+      }
+    }
+
+    // init theme: preferencia guardada > sistema > claro
+    const savedTheme = localStorage.getItem('check_theme');
+    if(savedTheme){
+      applyTheme(savedTheme);
+    } else {
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      applyTheme(prefersDark ? 'dark' : 'light');
+    }
+
+    $themeToggle.addEventListener('click', () => {
+      const cur = document.body.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+      const next = cur === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      localStorage.setItem('check_theme', next);
+    });
+
+    /* Clock */
+    function updateClock(){
+      $liveClock.textContent = formatTime(new Date());
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    /* Start time input */
+    function setStartFromNow(){
+      if(timePinned) return;
+      startTime = new Date();
+      $startTimeInput.value = formatTime(startTime);
+    }
+    setStartFromNow();
+
+    $startTimeInput.addEventListener('click', () => {
+      // open modal
+      const hh24 = startTime.getHours();
+      const mm = pad(startTime.getMinutes());
+      let hh12 = hh24 % 12 || 12;
+      $startTimeText.value = `${pad(hh12)}:${mm}`;
+      $startAmpm.textContent = hh24 >= 12 ? 'PM' : 'AM';
+      $startTimeModal.classList.add('active');
+    });
+
+    $startAmpm.addEventListener('click', () => {
+      $startAmpm.textContent = $startAmpm.textContent === 'AM' ? 'PM' : 'AM';
+    });
+
+    $btnCancelStart.addEventListener('click', () => $startTimeModal.classList.remove('active'));
+
+    $btnSaveStart.addEventListener('click', () => {
+      const txt = $startTimeText.value.trim();
+      const m = txt.match(/^(\d{1,2})[:](\d{2})$/);
+      if(!m){ alert('Formato inválido. Usa hh:mm'); return; }
+      let hh = parseInt(m[1],10); const mm = parseInt(m[2],10);
+      if(hh < 1 || hh > 12 || mm < 0 || mm > 59){ alert('Hora inválida'); return; }
+      const ampm = $startAmpm.textContent;
+      let hh24 = hh % 12; if(ampm === 'PM') hh24 += 12;
+      startTime.setHours(hh24, mm, 0, 0);
+      timePinned = true;
+      $startTimeInput.value = formatTime(startTime);
+      $startTimeModal.classList.remove('active');
+      render();
+    });
+
+    /* Add / Edit task modal */
+    function openAddModal(){
+      editingTaskId = null;
+      $modalTitle.textContent = 'Agregar nueva tarea';
+      $taskNameInput.value = '';
+      selectedMinutes = 0;
+      $timeDisplay.textContent = minutesToReadable(selectedMinutes);
+      $modalOverlay.classList.add('active');
+      $taskNameInput.focus();
+    }
+    function openEditModal(task){
+      editingTaskId = task.id;
+      $modalTitle.textContent = 'Editar tarea';
+      $taskNameInput.value = task.title;
+      selectedMinutes = task.mins;
+      $timeDisplay.textContent = minutesToReadable(selectedMinutes);
+      $modalOverlay.classList.add('active');
+      $taskNameInput.focus();
+    }
+    $btnAddTask.addEventListener('click', openAddModal);
+    $btnCancel.addEventListener('click', () => $modalOverlay.classList.remove('active'));
+
+    $btnDecreaseTime.addEventListener('click', () => {
+      selectedMinutes = Math.max(0, selectedMinutes - 15);
+      $timeDisplay.textContent = minutesToReadable(selectedMinutes);
+    });
+    $btnIncreaseTime.addEventListener('click', () => {
+      selectedMinutes = Math.min(24*60, selectedMinutes + 15);
+      $timeDisplay.textContent = minutesToReadable(selectedMinutes);
+    });
+
+    $timeDisplay.addEventListener('click', () => {
+      // ciclo rapidos
+      const pres = [15,30,45,60,90,120,180];
+      const curIdx = pres.indexOf(selectedMinutes);
+      selectedMinutes = pres[(curIdx+1) % pres.length];
+      $timeDisplay.textContent = minutesToReadable(selectedMinutes);
+    });
+
+    $btnAccept.addEventListener('click', () => {
+      const title = $taskNameInput.value.trim();
+      if(!title) { $modalOverlay.classList.remove('active'); return; }
+      if(editingTaskId){
+        const t = tasks.find(x => x.id === editingTaskId);
+        if(t){ t.title = title; t.mins = selectedMinutes; }
+      } else {
+        tasks.push({ id: nextId++, title, mins: selectedMinutes, completed: false });
+      }
+      $modalOverlay.classList.remove('active');
+      render();
+    });
+
+    /* Delete modal */
+    function openDeleteModal(id){
+      const t = tasks.find(x=>x.id===id);
+      if(!t) return;
+      deletingTaskId = id;
+      $deleteTaskName.textContent = t.title;
+      $deleteModalOverlay.classList.add('active');
+    }
+    $btnCancelDelete.addEventListener('click', ()=> $deleteModalOverlay.classList.remove('active'));
+    $btnConfirmDelete.addEventListener('click', ()=>{
+      tasks = tasks.filter(x=>x.id!==deletingTaskId);
+      deletingTaskId = null;
+      $deleteModalOverlay.classList.remove('active');
+      render();
+    });
+
+    /* Render tasks */
+    function render(){
+      // progress & totals
+      const completed = tasks.filter(t => t.completed).length;
+      const total = tasks.length;
+      const percent = total ? Math.round((completed/total)*100) : 0;
+      $progressBar.style.width = percent + '%';
+      $progressText.textContent = `${percent}% (${completed}/${total})`;
+      const totalMins = tasks.reduce((s,t)=>s+t.mins,0);
+      $totalTime.textContent = minutesToReadable(totalMins);
+
+      // build HTML
+      $taskList.innerHTML = tasks.map(t => {
+        const idx = tasks.findIndex(x => x.id === t.id);
+        let cursor = new Date(startTime.getTime());
+        for(let i=0;i<idx;i++) cursor.setMinutes(cursor.getMinutes() + tasks[i].mins);
+        const range = formatRange(cursor, t.mins);
+
+        return `
+          <div class="task ${t.completed ? 'completed' : ''}" data-id="${t.id}" draggable="true">
+            <div class="chk ${t.completed ? 'checked' : ''}" data-action="toggle" data-id="${t.id}" title="Marcar como ${t.completed ? 'no hecho':'hecho'}">
+              ${t.completed ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/></svg>'}
+            </div>
+            <div class="task-body">
+              <div class="task-title">${escapeHtml(t.title)}</div>
+            </div>
+            <div class="meta">
+              <div class="meta-top">
+                <div class="duration">${minutesToReadable(t.mins)}</div>
+                <div class="meta-icons">
+                  <button title="Editar" data-action="edit" data-id="${t.id}" aria-label="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                  <button title="Eliminar" data-action="delete" data-id="${t.id}" aria-label="Eliminar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+                </div>
+              </div>
+              <div class="time-range">${range}</div>
+            </div>
+          </div>
+        `;
+      }).join('') || `<div style="padding:28px;text-align:center;color:var(--muted)">No hay tareas. Añade una arriba.</div>`;
+
+      attachTaskHandlers();
+
+      let cursor = new Date(startTime.getTime());
+      tasks.forEach(t=> cursor.setMinutes(cursor.getMinutes() + t.mins));
+      $endTime.textContent = tasks.length ? formatTime(cursor) : '—';
+      $startTimeInput.value = formatTime(startTime);
+    }
+
+    function attachTaskHandlers(){
+      $taskList.querySelectorAll('.task').forEach(row => {
+        // Limpiar manejadores para evitar duplicados
+        row.onclick = null;
+        row.ondragstart = null;
+        row.ondragend = null;
+        row.ondragover = null;
+        row.ondrop = null;
+
+        // Click en toda la fila para marcar/desmarcar (ignorando botones)
+        row.onclick = (ev) => {
+          if (ev.target.closest('button')) return;
+          const id = parseInt(row.getAttribute('data-id'), 10);
+          const t = tasks.find(x => x.id === id);
+          if(t){ t.completed = !t.completed; render(); }
+        };
+
+        // --- CAMBIO: Lógica de Drag and Drop ---
+        let draggedId = null;
+
+        row.addEventListener('dragstart', (e) => {
+          draggedId = parseInt(row.getAttribute('data-id'), 10);
+          setTimeout(() => row.classList.add('dragging'), 0);
+          e.dataTransfer.effectAllowed = 'move';
+        });
+
+        row.addEventListener('dragend', () => {
+          row.classList.remove('dragging');
+        });
+
+        row.addEventListener('dragover', (e) => {
+          e.preventDefault(); // Necesario para permitir el drop
+        });
+
+        row.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const targetId = parseInt(row.getAttribute('data-id'), 10);
+          if (draggedId === targetId) return;
+
+          const draggedIndex = tasks.findIndex(t => t.id === draggedId);
+          const targetIndex = tasks.findIndex(t => t.id === targetId);
+          
+          // Mover el elemento en el array
+          const [draggedItem] = tasks.splice(draggedIndex, 1);
+          tasks.splice(targetIndex, 0, draggedItem);
+          
+          render();
+        });
+
+        // Click en los botones de acción internos (check, editar, eliminar)
+        row.querySelectorAll('[data-action]').forEach(el => {
+          el.onclick = (e) => {
+            e.stopPropagation(); // Evitar que el click se propague a la fila
+            const action = el.getAttribute('data-action');
+            const id = parseInt(el.getAttribute('data-id'), 10);
+            if(action === 'toggle'){
+              const t = tasks.find(x => x.id === id); if(t){ t.completed = !t.completed; render(); }
+            } else if(action === 'edit'){
+              const t = tasks.find(x => x.id === id); if(t) openEditModal(t);
+            } else if(action === 'delete'){
+              openDeleteModal(id);
+            }
+          };
+        });
+      });
+    }
+
+    /* small helper to escape html */
+    function escapeHtml(str = ''){
+      return str.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+    }
+
+    /* initialize */
+    document.addEventListener('DOMContentLoaded', ()=>{
+      tasks = [];
+      render();
+    });
+
+    // Manejadores de teclado
+    $taskNameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        $btnAccept.click();
+      }
+    });
+
+    $startTimeText.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        $btnSaveStart.click();
+      }
+    });
+    
+    document.addEventListener('keydown', (e)=>{
+      if (e.key === 'Escape') {
+        $modalOverlay.classList.remove('active');
+        $deleteModalOverlay.classList.remove('active');
+        $startTimeModal.classList.remove('active');
+      } else if (e.key === 'Enter' || e.key === ' ') { 
+        if ($deleteModalOverlay.classList.contains('active')) {
+          e.preventDefault(); 
+          $btnConfirmDelete.click();
+        }
+      }
+    });
+
+    // Cierre de modales al hacer click afuera
+    [ $modalOverlay, $deleteModalOverlay, $startTimeModal ].forEach(m=>{
+      m.addEventListener('click', (e)=> { if(e.target === m) m.classList.remove('active'); });
+    });
+
+    // expose window for debugging (optional)
+    window._app = { tasks, render };
+  </script>
+</body>
+</html>
