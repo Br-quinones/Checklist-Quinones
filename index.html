@@ -31,6 +31,13 @@
       --border: rgba(255,255,255,0.1); /* Borde más visible */
       --shadow: 0 10px 30px rgba(2,6,23,0.7);
     }
+    
+    /* SOLUCIÓN BUG MODO OSCURO: Reglas específicas para asegurar legibilidad */
+    body[data-theme="dark"] #startTimeInput,
+    body[data-theme="dark"] .stat b,
+    body[data-theme="dark"] .btn {
+      color: var(--text);
+    }
 
     /* Basic reset */
     *{box-sizing:border-box}
@@ -101,7 +108,7 @@
     .task-list{margin-top:16px;display:grid;gap:10px}
     .task {
       display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;
-      border: 2px solid transparent; 
+      border: 2px solid transparent;
       background:linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.4));
       transition:transform .22s ease, box-shadow .22s ease, border-color .22s ease, background .22s ease;
       position:relative;
@@ -115,7 +122,7 @@
       border-image: linear-gradient(90deg, var(--accent-1), var(--accent-2)) 1;
     }
 
-    body[data-theme="dark"] .task { 
+    body[data-theme="dark"] .task {
       background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); /* Fondo de tarea en oscuro */
     }
 
@@ -132,7 +139,7 @@
       width:44px;height:44px;border-radius:12px;border:2px solid rgba(15,23,42,0.06);display:grid;place-items:center;flex-shrink:0;
       background:linear-gradient(180deg, white, rgba(0,0,0,0.02));cursor:pointer;transition:all .18s ease;
     }
-    body[data-theme="dark"] .chk { 
+    body[data-theme="dark"] .chk {
       background: rgba(255,255,255,0.05); /* Fondo de checkbox en oscuro */
       border:2px solid rgba(255,255,255,0.1); /* Borde de checkbox en oscuro */
     }
@@ -151,7 +158,7 @@
       width:160px;min-width:160px;display:flex;flex-direction:column;align-items:center;gap:6px;
     }
     .meta-top {display:flex;align-items:center;justify-content:space-between;width:100%;}
-    
+
     .duration {
       font-size: 18px;
       font-weight: 900;
@@ -282,9 +289,11 @@
       <input id="taskNameInput" type="text" placeholder="" autocomplete="off"/>
       <div style="height:12px"></div>
       <div style="display:flex;gap:10px;align-items:center">
-        <button id="btnDecreaseTime" class="btn" title="Reducir 15 min">−</button>
+        <button id="btnDecrease15" class="btn" title="Reducir 15 min">−−</button>
+        <button id="btnDecrease5" class="btn" title="Reducir 5 min">−</button>
         <div id="timeDisplay" style="flex:1;text-align:center;font-weight:800;font-size:16px;padding:10px 12px;border-radius:10px;border:1px solid var(--border)"></div>
-        <button id="btnIncreaseTime" class="btn" title="Aumentar 15 min">+</button>
+        <button id="btnIncrease5" class="btn" title="Aumentar 5 min">+</button>
+        <button id="btnIncrease15" class="btn" title="Aumentar 15 min">++</button>
       </div>
       <div style="height:12px"></div>
       <div style="display:flex;justify-content:flex-end;gap:8px">
@@ -348,8 +357,10 @@
     const $btnAddTask = $('#btnAddTask');
     const $btnCancel = $('#btnCancel');
     const $btnAccept = $('#btnAccept');
-    const $btnDecreaseTime = $('#btnDecreaseTime');
-    const $btnIncreaseTime = $('#btnIncreaseTime');
+    const $btnDecrease15 = $('#btnDecrease15');
+    const $btnDecrease5 = $('#btnDecrease5');
+    const $btnIncrease5 = $('#btnIncrease5');
+    const $btnIncrease15 = $('#btnIncrease15');
 
     const $deleteModalOverlay = $('#deleteModalOverlay');
     const $deleteTaskName = $('#deleteTaskName');
@@ -444,12 +455,12 @@
 
     $btnCancelStart.addEventListener('click', () => $startTimeModal.classList.remove('active'));
 
-    $btnSaveStart.addEventListener('click', () => {
+      $btnSaveStart.addEventListener('click', () => {
       const txt = $startTimeText.value.trim();
       const m = txt.match(/^(\d{1,2})[:](\d{2})$/);
-      if(!m){ alert('Formato inválido. Usa hh:mm'); return; }
+      if(!m){ $startTimeModal.classList.remove('active'); return; }
       let hh = parseInt(m[1],10); const mm = parseInt(m[2],10);
-      if(hh < 1 || hh > 12 || mm < 0 || mm > 59){ alert('Hora inválida'); return; }
+      if(hh < 1 || hh > 12 || mm < 0 || mm > 59){ $startTimeModal.classList.remove('active'); return; }
       const ampm = $startAmpm.textContent;
       let hh24 = hh % 12; if(ampm === 'PM') hh24 += 12;
       startTime.setHours(hh24, mm, 0, 0);
@@ -464,7 +475,7 @@
       editingTaskId = null;
       $modalTitle.textContent = 'Agregar nueva tarea';
       $taskNameInput.value = '';
-      selectedMinutes = 0;
+      selectedMinutes = 30; // Default a 30 min para nuevas tareas
       $timeDisplay.textContent = minutesToReadable(selectedMinutes);
       $modalOverlay.classList.add('active');
       $taskNameInput.focus();
@@ -481,11 +492,19 @@
     $btnAddTask.addEventListener('click', openAddModal);
     $btnCancel.addEventListener('click', () => $modalOverlay.classList.remove('active'));
 
-    $btnDecreaseTime.addEventListener('click', () => {
+    $btnDecrease15.addEventListener('click', () => {
       selectedMinutes = Math.max(0, selectedMinutes - 15);
       $timeDisplay.textContent = minutesToReadable(selectedMinutes);
     });
-    $btnIncreaseTime.addEventListener('click', () => {
+    $btnDecrease5.addEventListener('click', () => {
+      selectedMinutes = Math.max(0, selectedMinutes - 5);
+      $timeDisplay.textContent = minutesToReadable(selectedMinutes);
+    });
+    $btnIncrease5.addEventListener('click', () => {
+      selectedMinutes = Math.min(24*60, selectedMinutes + 5);
+      $timeDisplay.textContent = minutesToReadable(selectedMinutes);
+    });
+    $btnIncrease15.addEventListener('click', () => {
       selectedMinutes = Math.min(24*60, selectedMinutes + 15);
       $timeDisplay.textContent = minutesToReadable(selectedMinutes);
     });
@@ -567,80 +586,87 @@
         `;
       }).join('') || `<div style="padding:28px;text-align:center;color:var(--muted)">No hay tareas. Añade una arriba.</div>`;
 
-      attachTaskHandlers();
-
       let cursor = new Date(startTime.getTime());
       tasks.forEach(t=> cursor.setMinutes(cursor.getMinutes() + t.mins));
       $endTime.textContent = tasks.length ? formatTime(cursor) : '—';
       $startTimeInput.value = formatTime(startTime);
     }
 
-    function attachTaskHandlers(){
-      $taskList.querySelectorAll('.task').forEach(row => {
-        // Limpiar manejadores para evitar duplicados
-        row.onclick = null;
-        row.ondragstart = null;
-        row.ondragend = null;
-        row.ondragover = null;
-        row.ondrop = null;
+    /* SOLUCIÓN BUG DRAG & DROP: Lógica de eventos refactorizada y centralizada */
 
-        // Click en toda la fila para marcar/desmarcar (ignorando botones)
-        row.onclick = (ev) => {
-          if (ev.target.closest('button')) return;
-          const id = parseInt(row.getAttribute('data-id'), 10);
-          const t = tasks.find(x => x.id === id);
-          if(t){ t.completed = !t.completed; render(); }
-        };
+    // Manejador centralizado para todos los clics en la lista de tareas
+    $taskList.addEventListener('click', e => {
+      const taskElement = e.target.closest('.task');
+      if (!taskElement) return;
 
-        // --- CAMBIO: Lógica de Drag and Drop ---
-        let draggedId = null;
+      const id = parseInt(taskElement.dataset.id, 10);
+      const actionTarget = e.target.closest('[data-action]');
 
-        row.addEventListener('dragstart', (e) => {
-          draggedId = parseInt(row.getAttribute('data-id'), 10);
-          setTimeout(() => row.classList.add('dragging'), 0);
-          e.dataTransfer.effectAllowed = 'move';
-        });
+      if (actionTarget) {
+        // Clic en un botón de acción (check, editar, eliminar)
+        const action = actionTarget.dataset.action;
+        if (action === 'toggle') {
+          const t = tasks.find(x => x.id === id); if(t){ t.completed = !t.completed; render(); }
+        } else if (action === 'edit') {
+          const t = tasks.find(x => x.id === id); if(t) openEditModal(t);
+        } else if (action === 'delete') {
+          openDeleteModal(id);
+        }
+      } else {
+        // Clic en el cuerpo de la tarea para marcar/desmarcar
+        const t = tasks.find(x => x.id === id);
+        if(t){ t.completed = !t.completed; render(); }
+      }
+    });
 
-        row.addEventListener('dragend', () => {
-          row.classList.remove('dragging');
-        });
+    // Lógica robusta de Drag and Drop usando delegación de eventos
+    let draggedId = null;
 
-        row.addEventListener('dragover', (e) => {
-          e.preventDefault(); // Necesario para permitir el drop
-        });
+    $taskList.addEventListener('dragstart', e => {
+      const taskElement = e.target.closest('.task');
+      if (taskElement) {
+        draggedId = parseInt(taskElement.dataset.id, 10);
+        setTimeout(() => taskElement.classList.add('dragging'), 0);
+        e.dataTransfer.effectAllowed = 'move';
+      }
+    });
 
-        row.addEventListener('drop', (e) => {
-          e.preventDefault();
-          const targetId = parseInt(row.getAttribute('data-id'), 10);
-          if (draggedId === targetId) return;
+    $taskList.addEventListener('dragend', () => {
+      const draggedElement = $taskList.querySelector('.dragging');
+      if (draggedElement) {
+        draggedElement.classList.remove('dragging');
+      }
+      draggedId = null;
+    });
 
+    $taskList.addEventListener('dragover', e => {
+      e.preventDefault(); // Necesario para permitir el drop
+    });
+
+    $taskList.addEventListener('drop', e => {
+      e.preventDefault();
+      const targetElement = e.target.closest('.task');
+      // Limpiar clase 'dragging' al soltar
+      const draggedDOMElement = $taskList.querySelector('.dragging');
+      if (draggedDOMElement) {
+        draggedDOMElement.classList.remove('dragging');
+      }
+
+      if (targetElement && draggedId !== null) {
+        const targetId = parseInt(targetElement.dataset.id, 10);
+        if (draggedId !== targetId) {
           const draggedIndex = tasks.findIndex(t => t.id === draggedId);
           const targetIndex = tasks.findIndex(t => t.id === targetId);
-          
-          // Mover el elemento en el array
-          const [draggedItem] = tasks.splice(draggedIndex, 1);
-          tasks.splice(targetIndex, 0, draggedItem);
-          
-          render();
-        });
 
-        // Click en los botones de acción internos (check, editar, eliminar)
-        row.querySelectorAll('[data-action]').forEach(el => {
-          el.onclick = (e) => {
-            e.stopPropagation(); // Evitar que el click se propague a la fila
-            const action = el.getAttribute('data-action');
-            const id = parseInt(el.getAttribute('data-id'), 10);
-            if(action === 'toggle'){
-              const t = tasks.find(x => x.id === id); if(t){ t.completed = !t.completed; render(); }
-            } else if(action === 'edit'){
-              const t = tasks.find(x => x.id === id); if(t) openEditModal(t);
-            } else if(action === 'delete'){
-              openDeleteModal(id);
-            }
-          };
-        });
-      });
-    }
+          if (draggedIndex > -1 && targetIndex > -1) {
+            const [draggedItem] = tasks.splice(draggedIndex, 1);
+            tasks.splice(targetIndex, 0, draggedItem);
+            render();
+          }
+        }
+      }
+      draggedId = null;
+    });
 
     /* small helper to escape html */
     function escapeHtml(str = ''){
@@ -673,9 +699,9 @@
         $modalOverlay.classList.remove('active');
         $deleteModalOverlay.classList.remove('active');
         $startTimeModal.classList.remove('active');
-      } else if (e.key === 'Enter' || e.key === ' ') { 
+      } else if (e.key === 'Enter' || e.key === ' ') {
         if ($deleteModalOverlay.classList.contains('active')) {
-          e.preventDefault(); 
+          e.preventDefault();
           $btnConfirmDelete.click();
         }
       }
