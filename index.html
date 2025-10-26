@@ -597,6 +597,8 @@
       tasks.forEach(t=> cursor.setMinutes(cursor.getMinutes() + t.mins));
       $endTime.textContent = tasks.length ? formatTime(cursor) : '—';
       $startTimeInput.value = formatTime(startTime);
+
+      saveTasksToLocalStorage();
     }
 
     /* SOLUCIÓN BUG DRAG & DROP: Lógica de eventos refactorizada y centralizada */
@@ -680,10 +682,45 @@
       return str.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
     }
 
+    /* === NUEVO: Funciones para guardar y cargar === */
+    function saveTasksToLocalStorage() {
+      // Guardamos el array 'tasks' y también el estado del 'startTime'
+      const dataToSave = {
+        tasks: tasks,
+        // Guardamos la hora de inicio SÓLO si fue fijada manualmente
+        startTime: timePinned ? startTime.toISOString() : null 
+      };
+      localStorage.setItem('myTasksData', JSON.stringify(dataToSave));
+    }
+
+    function loadTasksFromLocalStorage() {
+      const savedData = localStorage.getItem('myTasksData');
+      if (savedData) {
+        const data = JSON.parse(savedData);
+        tasks = data.tasks || []; // Carga las tareas
+        
+        // Restaura el startTime si estaba guardado
+        if (data.startTime) {
+          startTime = new Date(data.startTime);
+          timePinned = true; // Marca que la hora está fijada
+        }
+
+        // Importante: Asegurar que el 'nextId' no se repita
+        if (tasks.length > 0) {
+          // Busca el ID más alto que exista y le suma 1
+          const maxId = tasks.reduce((max, t) => Math.max(max, t.id), 0);
+          nextId = maxId + 1;
+        }
+      } else {
+        tasks = []; // Si no hay nada guardado, empezamos de cero
+      }
+    }
+    /* === FIN DE NUEVAS FUNCIONES === */
+
     /* initialize */
     document.addEventListener('DOMContentLoaded', ()=>{
-      tasks = [];
-      render();
+      loadTasksFromLocalStorage(); // <-- CAMBIO AQUÍ
+      render(); // Renderiza las tareas que cargamos
     });
 
     // Manejadores de teclado
